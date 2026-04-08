@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="grade-view-container">
+    <h1>📝 Grade Management</h1>
+    
+    {% if student %}
+    <!-- Single Student View -->
+    <div class="student-header">
+        <h2>{{ student.name }} {{ student.roll_number }}</h2>
+        <a href="{% url 'add-grade' student.id %}" class="btn btn-primary">➕ Add Grade</a>
+    </div>
+    {% endif %}
+    
+    <!-- Grade Statistics -->
+    {% if grade_stats %}
+    <div class="stat-section">
+        <h3>Grade Distribution</h3>
+        <div class="stat-cards">
+            {% for stat in grade_stats %}
+            <div class="stat-card">
+                <span class="grade-badge grade-{{ stat.grade }}">{{ stat.grade }}</span>
+                <span class="stat-count">{{ stat.count }} Students</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- All Grades Table -->
+    {% if grades %}
+    <div class="grades-table-section">
+        <h3>All Grades</h3>
+        <table class="grades-table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Roll Number</th>
+                    <th>Subject Code</th>
+                    <th>Subject</th>
+                    <th>Semester</th>
+                    <th>Marks</th>
+                    <th>Grade</th>
+                    <th>Grade Point</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for grade in grades %}
+                <tr class="grade-row-{{ grade.grade }}">
+                    <td>
+                        <a href="{% url 'grade-view-student' grade.student.id %}">{{ grade.student.name }}</a>
+                    </td>
+                    <td>{{ grade.student.roll_number }}</td>
+                    <td><strong>{{ grade.subject.code }}</strong></td>
+                    <td>{{ grade.subject.name }}</td>
+                    <td>{{ grade.semester }}</td>
+                    <td>{{ grade.marks }}/100</td>
+                    <td>
+                        <span class="grade-badge grade-{{ grade.grade }}">{{ grade.grade }}</span>
+                    </td>
+                    <td>{{ grade.grade_point }}</td>
+                    <td>{{ grade.date_submitted }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="no-data">
+        <p>No grades available</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.grade-view-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.student-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.student-header h2 {
+    margin: 0;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-primary {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.stat-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-section h3 {
+    margin-top: 0;
+    color: #667eea;
+}
+
+.stat-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 5px;
+    border: 1px solid #eee;
+}
+
+.grade-badge {
+    padding: 6px 10px;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+    margin-bottom: 8px;
+    display: inline-block;
+}
+
+.grade-A\+ { background: #4CAF50; }
+.grade-A { background: #66BB6A; }
+.grade-B\+ { background: #81C784; }
+.grade-B { background: #A5D6A7; }
+.grade-C { background: #FFB74D; }
+.grade-D { background: #FF7043; }
+.grade-F { background: #E53935; }
+
+.stat-count {
+    font-size: 12px;
+    color: #666;
+}
+
+.grades-table-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.grades-table-section h3 {
+    margin-top: 0;
+    color: #667eea;
+}
+
+.grades-table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow-x: auto;
+}
+
+.grades-table th {
+    background: #f0f0f0;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.grades-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.grades-table a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.grades-table a:hover {
+    text-decoration: underline;
+}
+
+.grades-table tr:hover {
+    background: #f9f9f9;
+}
+
+.grade-row-A\+ {
+    border-left: 4px solid #4CAF50;
+}
+
+.grade-row-A {
+    border-left: 4px solid #66BB6A;
+}
+
+.grade-row-B\+ {
+    border-left: 4px solid #81C784;
+}
+
+.grade-row-B {
+    border-left: 4px solid #A5D6A7;
+}
+
+.grade-row-C {
+    border-left: 4px solid #FFB74D;
+}
+
+.grade-row-D {
+    border-left: 4px solid #FF7043;
+}
+
+.grade-row-F {
+    border-left: 4px solid #E53935;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    background: white;
+    border-radius: 8px;
+}
+</style>
+{% endblock %}

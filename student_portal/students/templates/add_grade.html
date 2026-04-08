@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="add-grade-container">
+    <div class="form-header">
+        <h1>➕ Add Grade</h1>
+        <p>Adding grade for <strong>{{ student.name }}</strong></p>
+    </div>
+    
+    <form method="post" class="grade-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="subject_id">Subject *</label>
+            <select id="subject_id" name="subject_id" required>
+                <option value="">-- Select a subject --</option>
+                {% for subject in available_subjects %}
+                <option value="{{ subject.id }}" data-credits="{{ subject.credits }}">
+                    {{ subject.code }} - {{ subject.name }} ({{ subject.subject_type }})
+                </option>
+                {% endfor %}
+            </select>
+            <small>Available subjects for Semester {{ student.semester }}</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="semester">Semester *</label>
+            <select id="semester" name="semester" required value="{{ student.semester }}">
+                <option value="{{ student.semester }}" selected>{{ student.semester }}</option>
+                {% for sem_id, sem_name in semesters %}
+                {% if sem_id != student.semester %}
+                <option value="{{ sem_id }}">{{ sem_name }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="marks">Marks (0-100) *</label>
+            <input type="number" id="marks" name="marks" min="0" max="100" placeholder="Enter marks" required>
+            <small>Enter marks out of 100</small>
+        </div>
+        
+        <div class="grade-preview">
+            <div class="preview-item">
+                <span>Grade</span>
+                <span id="grade-display" class="grade-badge">--</span>
+            </div>
+            <div class="preview-item">
+                <span>Grade Point</span>
+                <span id="gp-display" class="grade-point">--</span>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">✓ Save Grade</button>
+            <a href="{% url 'student-detail' student.id %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    
+    <!-- Grading Scale Reference -->
+    <div class="grading-scale">
+        <h3>Grading Scale Reference</h3>
+        <table class="scale-table">
+            <thead>
+                <tr>
+                    <th>Marks Range</th>
+                    <th>Grade</th>
+                    <th>Grade Point</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>90 - 100</td>
+                    <td><span class="grade-badge grade-A+">A+</span></td>
+                    <td>10</td>
+                </tr>
+                <tr>
+                    <td>85 - 89</td>
+                    <td><span class="grade-badge grade-A">A</span></td>
+                    <td>9</td>
+                </tr>
+                <tr>
+                    <td>80 - 84</td>
+                    <td><span class="grade-badge grade-B+">B+</span></td>
+                    <td>8.5</td>
+                </tr>
+                <tr>
+                    <td>75 - 79</td>
+                    <td><span class="grade-badge grade-B">B</span></td>
+                    <td>8</td>
+                </tr>
+                <tr>
+                    <td>70 - 74</td>
+                    <td><span class="grade-badge grade-C+">C+</span></td>
+                    <td>7.5</td>
+                </tr>
+                <tr>
+                    <td>65 - 69</td>
+                    <td><span class="grade-badge grade-C">C</span></td>
+                    <td>7</td>
+                </tr>
+                <tr>
+                    <td>60 - 64</td>
+                    <td><span class="grade-badge grade-D+">D+</span></td>
+                    <td>6.5</td>
+                </tr>
+                <tr>
+                    <td>55 - 59</td>
+                    <td><span class="grade-badge grade-D">D</span></td>
+                    <td>6</td>
+                </tr>
+                <tr>
+                    <td>50 - 54</td>
+                    <td><span class="grade-badge grade-E">E</span></td>
+                    <td>5</td>
+                </tr>
+                <tr>
+                    <td>0 - 49</td>
+                    <td><span class="grade-badge grade-F">F</span></td>
+                    <td>0</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.getElementById('marks').addEventListener('input', function() {
+    const marks = parseInt(this.value) || 0;
+    let grade = '--';
+    let gp = '--';
+    
+    if (marks >= 90) { grade = 'A+'; gp = '10'; }
+    else if (marks >= 85) { grade = 'A'; gp = '9'; }
+    else if (marks >= 80) { grade = 'B+'; gp = '8.5'; }
+    else if (marks >= 75) { grade = 'B'; gp = '8'; }
+    else if (marks >= 70) { grade = 'C+'; gp = '7.5'; }
+    else if (marks >= 65) { grade = 'C'; gp = '7'; }
+    else if (marks >= 60) { grade = 'D+'; gp = '6.5'; }
+    else if (marks >= 55) { grade = 'D'; gp = '6'; }
+    else if (marks >= 50) { grade = 'E'; gp = '5'; }
+    else if (marks > 0) { grade = 'F'; gp = '0'; }
+    
+    document.getElementById('grade-display').textContent = grade;
+    document.getElementById('grade-display').className = 'grade-badge grade-' + grade.replace('+', '\\+');
+    document.getElementById('gp-display').textContent = gp;
+});
+</script>
+
+<style>
+.add-grade-container {
+    padding: 20px;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.form-header h1 {
+    margin: 0 0 5px 0;
+}
+
+.form-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.grade-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #999;
+    font-size: 12px;
+}
+
+.grade-preview {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.preview-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+    border-left: 3px solid #667eea;
+}
+
+.preview-item span:first-child {
+    font-size: 12px;
+    color: #666;
+}
+
+.grade-badge {
+    padding: 6px 12px;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+}
+
+.grade-A\+ { background: #4CAF50; }
+.grade-A { background: #66BB6A; }
+.grade-B\+ { background: #81C784; }
+.grade-B { background: #A5D6A7; }
+.grade-C\+ { background: #FFB74D; }
+.grade-C { background: #FFA726; }
+.grade-D\+ { background: #FF7043; }
+.grade-D { background: #FF5722; }
+.grade-E { background: #E64A19; }
+.grade-F { background: #E53935; }
+
+.grade-point {
+    font-weight: bold;
+    color: #667eea;
+    font-size: 16px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    flex: 1;
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    text-decoration: none;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-secondary {
+    background: #ddd;
+    color: #333;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.grading-scale {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.grading-scale h3 {
+    margin-top: 0;
+    color: #667eea;
+}
+
+.scale-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.scale-table th {
+    background: #f0f0f0;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+    font-weight: bold;
+}
+
+.scale-table td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.scale-table tr:hover {
+    background: #f9f9f9;
+}
+</style>
+{% endblock %}

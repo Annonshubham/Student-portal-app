@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="student-detail-container">
+    <div class="student-header">
+        <div class="student-info">
+            <h1>{{ student.name }}</h1>
+            <p class="roll-number">Roll Number: <strong>{{ student.roll_number }}</strong></p>
+            <p class="program">Program: <strong>{{ student.get_program_display }} - Semester {{ student.semester }}</strong></p>
+        </div>
+        <div class="student-actions">
+            <a href="{% url 'edit-student' student.id %}" class="btn-action btn-edit">✏️ Edit</a>
+            <form method="post" action="{% url 'delete-student' student.id %}" style="display:inline" onsubmit="return confirm('Are you sure?');">
+                {% csrf_token %}
+                <button type="submit" class="btn-action btn-delete">🗑️ Delete</button>
+            </form>
+            <a href="{% url 'add-grade' student.id %}" class="btn-action btn-primary">➕ Add Grade</a>
+            <a href="{% url 'mark-attendance' student.id %}" class="btn-action btn-primary">✏️ Mark Attendance</a>
+        </div>
+    </div>
+    
+    <!-- Overall Statistics -->
+    <div class="stats-overview">
+        <div class="stat-item">
+            <span class="stat-label">CGPA</span>
+            <span class="stat-value cgpa-{{ student.current_cgpa|floatformat:0 }}">{{ student.current_cgpa }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Average Marks</span>
+            <span class="stat-value">{{ average_marks }}/100</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Attendance</span>
+            <span class="stat-value">{{ attendance_percentage }}%</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Age</span>
+            <span class="stat-value">{{ student.age }} years</span>
+        </div>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-button active" data-tab="grades">📚 Grades</button>
+        <button class="tab-button" data-tab="attendance">✅ Attendance</button>
+        <button class="tab-button" data-tab="attendance-subject">📊 Subject-wise Attendance</button>
+    </div>
+    
+    <!-- Grades Tab -->
+    <div id="grades" class="tab-content active">
+        <h2>Academic Grades</h2>
+        {% if grades %}
+            {% regroup grades by semester as grades_by_semester %}
+            {% for semester_group in grades_by_semester %}
+                <div class="semester-section">
+                    <h3>Semester {{ semester_group.grouper }}</h3>
+                    <table class="detail-table">
+                        <thead>
+                            <tr>
+                                <th>Subject Code</th>
+                                <th>Subject Name</th>
+                                <th>Credits</th>
+                                <th>Marks</th>
+                                <th>Grade</th>
+                                <th>Grade Point</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for grade in semester_group.list %}
+                            <tr>
+                                <td><strong>{{ grade.subject.code }}</strong></td>
+                                <td>{{ grade.subject.name }}</td>
+                                <td>{{ grade.subject.credits }}</td>
+                                <td>{{ grade.marks }}/100</td>
+                                <td>
+                                    <span class="grade-badge grade-{{ grade.grade }}">{{ grade.grade }}</span>
+                                </td>
+                                <td>{{ grade.grade_point }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="no-data">No grades recorded yet</p>
+        {% endif %}
+    </div>
+    
+    <!-- Attendance Tab -->
+    <div id="attendance" class="tab-content">
+        <h2>Attendance Records</h2>
+        <p class="attendance-summary">Overall Attendance: <strong>{{ attendance_percentage }}%</strong></p>
+        {% if attendance_records %}
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Subject</th>
+                        <th>Status</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance_records %}
+                    <tr class="attendance-row-{{ record.is_present|lower }}">
+                        <td>{{ record.date }}</td>
+                        <td>{{ record.subject.code }}</td>
+                        <td>
+                            {% if record.is_present %}
+                                <span class="badge badge-present">✓ Present</span>
+                            {% else %}
+                                <span class="badge badge-absent">✗ Absent</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ record.remarks|default:"" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-data">No attendance records</p>
+        {% endif %}
+    </div>
+    
+    <!-- Subject-wise Attendance -->
+    <div id="attendance-subject" class="tab-content">
+        <h2>Attendance by Subject</h2>
+        {% if attendance_by_subject %}
+            <div class="attendance-grid">
+                {% for code, data in attendance_by_subject.items %}
+                <div class="attendance-card">
+                    <h4>{{ data.subject.name }}</h4>
+                    <p class="subject-code">Code: {{ code }}</p>
+                    <div class="attendance-stat">
+                        <span>Present: {{ data.present }}</span>
+                        <span>Absent: {{ data.absent }}</span>
+                        <span>Total: {{ data.present|add:data.absent }}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ data.percentage }}%"></div>
+                    </div>
+                    <p class="percentage">{{ data.percentage }}%</p>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-data">No attendance data</p>
+        {% endif %}
+    </div>
+    
+    <div class="back-link">
+        <a href="{% url 'students' %}">← Back to Students</a>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', () => {
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        button.classList.add('active');
+        document.getElementById(button.dataset.tab).classList.add('active');
+    });
+});
+</script>
+
+<style>
+.student-detail-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.student-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.student-info h1 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+}
+
+.student-info p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.student-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 12px;
+    transition: 0.3s;
+    display: inline-block;
+}
+
+.btn-edit {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn-primary {
+    background: #2196F3;
+    color: white;
+}
+
+.btn-delete {
+    background: #f44336;
+    color: white;
+}
+
+.btn-action:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-item {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    padding: 8px;
+    border-radius: 4px;
+    color: white;
+}
+
+.stat-value.cgpa-0, .stat-value.cgpa-1, .stat-value.cgpa-2, .stat-value.cgpa-3, 
+.stat-value.cgpa-4, .stat-value.cgpa-5, .stat-value.cgpa-6, .stat-value.cgpa-7, 
+.stat-value.cgpa-8, .stat-value.cgpa-9, .stat-value.cgpa-10 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ddd;
+}
+
+.tab-button {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: 0.3s;
+}
+
+.tab-button.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.tab-content {
+    display: none;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.semester-section {
+    margin-bottom: 30px;
+}
+
+.semester-section h3 {
+    color: #667eea;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.detail-table th {
+    background: #f5f5f5;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+    font-weight: bold;
+}
+
+.detail-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.detail-table tr:hover {
+    background: #f9f9f9;
+}
+
+.grade-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.grade-A\+ { background: #4CAF50; }
+.grade-A { background: #66BB6A; }
+.grade-B\+ { background: #81C784; }
+.grade-B { background: #A5D6A7; }
+.grade-C { background: #FFB74D; }
+.grade-D { background: #FF7043; }
+.grade-F { background: #E53935; }
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.badge-present {
+    background: #4CAF50;
+    color: white;
+}
+
+.badge-absent {
+    background: #f44336;
+    color: white;
+}
+
+.attendance-row-true {
+    background: #f1f8f6;
+}
+
+.attendance-row-false {
+    background: #fff3f3;
+}
+
+.attendance-summary {
+    font-size: 16px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 5px;
+}
+
+.attendance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.attendance-card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.attendance-card h4 {
+    margin: 0 0 5px 0;
+}
+
+.subject-code {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+}
+
+.attendance-stat {
+    display: flex;
+    justify-content: space-around;
+    margin: 10px 0;
+    font-size: 12px;
+}
+
+.attendance-stat span {
+    background: #f5f5f5;
+    padding: 5px 10px;
+    border-radius: 3px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50 0%, #81C784 100%);
+    transition: width 0.3s;
+}
+
+.percentage {
+    text-align: center;
+    margin: 5px 0 0 0;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.no-data {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+}
+
+.back-link {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.back-link a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

@@ -1,25 +1,151 @@
-<!DOCTYPE html>
+{% extends 'base.html' %}
+{% block content %}
+
 <h1>Students List</h1>
 
-<table class="table">
+<!-- Search form -->
+<form method="get" action="{% url 'students' %}" class="search-form" style="margin-bottom:1rem;">
+    <div class="search-input-wrap">
+        <input class="search-input" type="text" name="q" placeholder="Search students by name..." value="{{ query|default:'' }}" aria-label="Search students by name" />
+        <button class="search-button" type="submit" aria-label="Search">🔍</button>
+        <button type="button" class="search-clear" title="Clear" aria-label="Clear search">✕</button>
+    </div>
+
+    {% if query %}
+        <div class="result-meta">
+            <span class="result-count">{{ students.count }} result{{ students.count|pluralize }}</span>
+            <a href="{% url 'students' %}" class="btn-clear">Clear</a>
+        </div>
+    {% endif %}
+</form>
+
+<!-- Add student: toggle button + inline form -->
+<div class="add-section">
+    <button type="button" class="add-toggle-btn" aria-expanded="false">+ Add new student</button>
+
+    <form class="add-inline-form" method="post" action="{% url 'add-student' %}" style="display:none;" novalidate>
+        {% csrf_token %}
+        <div class="form-row">
+            <input name="name" type="text" placeholder="Name" required />
+            <input name="roll_number" type="text" placeholder="Roll #" required />
+            <input name="age" type="number" placeholder="Age" min="18" max="60" required />
+            <input name="program" type="hidden" value="B.Tech" />
+            <input name="semester" type="hidden" value="1" />
+            <button class="btn-submit" type="submit">Add Student</button>
+            <button type="button" class="btn-cancel add-cancel">Cancel</button>
+        </div>
+    </form>
+</div>
+
+{% if not_found %}
+    <div class="alert alert-warning">No students found for "{{ query }}".</div>
+{% endif %}
+
+{% if students.count %}
+<table class="table search-active">
     <tr>
         <th>ID</th>
         <th>Name</th>
+        <th>Age</th>
         <th>Course</th>
         <th>Marks</th>
+        <th>Actions</th>
     </tr>
 
+    {% for student in students %}
     <tr>
-        <td>1</td>
-        <td>Rahul</td>
-        <td>Python</td>
-        <td>85</td>
-    </tr>
+        <td>{{ student.id }}</td>
+        <td class="student-name">{{ student.name }}</td>
+        <td>{{ student.age }}</td>
+        <td>{{ student.course }}</td>
+        <td>{{ student.marks }}</td>
+        <td>
+            <a class="btn-edit" href="{% url 'edit-student' student.id %}" title="Edit">
+                <!-- pencil icon -->
+                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+                </svg>
+                <span class="visually-hidden">Edit</span>
+            </a>
 
-    <tr>
-        <td>2</td>
-        <td>Anita</td>
-        <td>Django</td>
-        <td>92</td>
+            <form method="post" action="{% url 'delete-student' student.id %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn-delete" onclick="return confirm('Delete student {{ student.name }}?');" title="Delete">
+                    <!-- trash icon -->
+                    <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                        <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                    <span class="visually-hidden">Delete</span>
+                </button>
+            </form>
+        </td>
     </tr>
+    {% endfor %}
 </table>
+{% else %}
+    {% if not not_found %}
+        <div class="alert alert-info">No students available.</div>
+    {% endif %}
+{% endif %}
+
+{% if query %}
+<script>
+// highlight matched query in `.student-name` cells (case-insensitive)
+(function(){
+    const q = "{{ query|escapejs }}"; // safely inject search string
+    if (!q) return;
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig');
+    document.querySelectorAll('.student-name').forEach(td => {
+        td.innerHTML = td.textContent.replace(re, match => `<mark>${match}</mark>`);
+    });
+})();
+</script>
+{% endif %}
+
+<script>
+// search input: show inline clear button and clear+submit
+(function(){
+    const form = document.querySelector('.search-form');
+    if (!form) return;
+    const input = form.querySelector('.search-input');
+    const clearBtn = form.querySelector('.search-clear');
+
+    function updateClear(){
+        if (!clearBtn) return;
+        clearBtn.style.display = input.value.trim() ? 'inline-flex' : 'none';
+    }
+
+    input.addEventListener('input', updateClear);
+    clearBtn && clearBtn.addEventListener('click', function(){
+        input.value = '';
+        form.submit();
+    });
+
+    // initialize visibility
+    updateClear();
+
+    // --- Add-inline form toggle ---
+    const addToggle = document.querySelector('.add-toggle-btn');
+    const addForm = document.querySelector('.add-inline-form');
+    const addCancel = document.querySelector('.add-cancel');
+
+    if (addToggle && addForm){
+        addToggle.addEventListener('click', function(){
+            const visible = addForm.style.display !== 'none';
+            addForm.style.display = visible ? 'none' : 'block';
+            addToggle.setAttribute('aria-expanded', String(!visible));
+            if (!visible) addForm.querySelector('input[name="name"]').focus();
+        });
+    }
+
+    if (addCancel && addForm){
+        addCancel.addEventListener('click', function(){
+            addForm.style.display = 'none';
+            addToggle.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+})();
+</script>
+
+{% endblock %}

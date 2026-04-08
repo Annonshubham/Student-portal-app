@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="attendance-report-container">
+    <h1>📊 Attendance Report</h1>
+    
+    {% if student %}
+    <div class="report-header">
+        <h2>{{ student.name }}</h2>
+        <p>Roll Number: {{ student.roll_number }}</p>
+    </div>
+    {% endif %}
+    
+    {% if attendance_by_subject %}
+    <div class="report-summary">
+        <h3>Summary</h3>
+        <div class="summary-cards">
+            {% for code, data in attendance_by_subject.items %}
+                {% if forloop.first %}
+                <div class="summary-card">
+                    <span class="label">Total Classes</span>
+                    <span class="value">{{ data.present|add:data.absent }}</span>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="subjects-grid">
+        {% for code, data in attendance_by_subject.items %}
+        <div class="subject-card">
+            <div class="card-header">
+                <h4>{{ data.subject.name }}</h4>
+                <p class="subject-code">{{ code }}</p>
+            </div>
+            
+            <div class="card-stats">
+                <div class="stat">
+                    <span class="stat-label">Present</span>
+                    <span class="stat-value present">{{ data.present }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Absent</span>
+                    <span class="stat-value absent">{{ data.absent }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Total</span>
+                    <span class="stat-value">{{ data.present|add:data.absent }}</span>
+                </div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-present" style="width: {% widthratio data.present data.present|add:data.absent 100 %}%"></div>
+                </div>
+                <p class="percentage">{{ data.percentage }}% Attendance</p>
+            </div>
+            
+            <!-- Status Badge -->
+            <div class="status-badge">
+                {% if data.percentage >= 75 %}
+                    <span class="badge badge-good">✓ Good</span>
+                {% elif data.percentage >= 60 %}
+                    <span class="badge badge-warning">⚠ Warning</span>
+                {% else %}
+                    <span class="badge badge-danger">✗ Poor</span>
+                {% endif %}
+            </div>
+            
+            <!-- Records -->
+            <div class="records-section">
+                <h5>Recent Records</h5>
+                <table class="records-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in data.records|slice:":5" %}
+                        <tr class="record-{{ record.is_present|lower }}">
+                            <td>{{ record.date }}</td>
+                            <td>
+                                {% if record.is_present %}
+                                    <span class="badge badge-present">✓</span>
+                                {% else %}
+                                    <span class="badge badge-absent">✗</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ record.remarks|default:"" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if student %}
+    <div class="actions">
+        <a href="{% url 'student-detail' student.id %}" class="btn btn-primary">← Back to Profile</a>
+        <a href="{% url 'attendance-viewer' %}" class="btn btn-secondary">View All Students</a>
+    </div>
+    {% else %}
+    <div class="actions">
+        <a href="{% url 'attendance-viewer' %}" class="btn btn-secondary">← Back to Attendance</a>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="no-data">
+        <p>No attendance data available</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.attendance-report-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.report-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.report-header h2 {
+    margin: 0 0 5px 0;
+}
+
+.report-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.report-summary {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.report-summary h3 {
+    margin-top: 0;
+    color: #667eea;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.summary-card {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.summary-card .label {
+    display: block;
+    font-size: 12px;
+    opacity: 0.9;
+    margin-bottom: 5px;
+}
+
+.summary-card .value {
+    display: block;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.subjects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.subject-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+}
+
+.card-header h4 {
+    margin: 0 0 5px 0;
+}
+
+.subject-code {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #eee;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.stat-value.present {
+    color: #4CAF50;
+}
+
+.stat-value.absent {
+    color: #f44336;
+}
+
+.progress-container {
+    padding: 15px;
+}
+
+.progress-bar {
+    height: 10px;
+    background: #eee;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-present {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50 0%, #45a049 100%);
+    transition: width 0.3s;
+}
+
+.percentage {
+    text-align: center;
+    margin: 0;
+    font-weight: bold;
+    color: #667eea;
+    font-size: 14px;
+}
+
+.status-badge {
+    padding: 0 15px 10px 15px;
+    text-align: center;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.badge-present {
+    background: #4CAF50;
+}
+
+.badge-absent {
+    background: #f44336;
+}
+
+.badge-good {
+    background: #4CAF50;
+}
+
+.badge-warning {
+    background: #FFB74D;
+}
+
+.badge-danger {
+    background: #f44336;
+}
+
+.records-section {
+    padding: 15px;
+    border-top: 1px solid #eee;
+}
+
+.records-section h5 {
+    margin: 0 0 10px 0;
+    color: #667eea;
+    font-size: 13px;
+}
+
+.records-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.records-table th {
+    background: #f0f0f0;
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+}
+
+.records-table td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.record-true {
+    background: #f1f8f6;
+}
+
+.record-false {
+    background: #fff3f3;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-secondary {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    background: white;
+    border-radius: 8px;
+}
+</style>
+{% endblock %}

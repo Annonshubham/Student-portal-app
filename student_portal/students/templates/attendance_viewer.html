@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="attendance-container">
+    <h1>✅ Attendance Viewer</h1>
+    
+    <!-- Attendance Statistics -->
+    <div class="attendance-stats">
+        <div class="stat-card">
+            <span class="stat-label">Total Records</span>
+            <span class="stat-value">{{ total_records }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Total Present</span>
+            <span class="stat-value" style="color: #4CAF50;">{{ present_count }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Total Absent</span>
+            <span class="stat-value" style="color: #f44336;">{{ total_records|add:present_count|add:total_records }}</span>
+        </div>
+    </div>
+    
+    <!-- Student Selector -->
+    <div class="selector-section">
+        <h2>Select Student</h2>
+        <form method="get" class="selector-form">
+            <select name="student_id" id="student_id" onchange="this.form.submit()">
+                <option value="">-- Choose a student --</option>
+                {% for student in students %}
+                <option value="{{ student.id }}" {% if selected_student.id == student.id %}selected{% endif %}>
+                    {{ student.roll_number }} - {{ student.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    
+    {% if selected_student %}
+    <div class="attendance-result">
+        <!-- Student Info -->
+        <div class="result-header">
+            <div>
+                <h2>{{ selected_student.name }}</h2>
+                <p>Roll Number: {{ selected_student.roll_number }}</p>
+            </div>
+            <div class="attendance-display">
+                <div class="attendance-value">{{ attendance_percentage }}%</div>
+                <div class="attendance-label">Attendance</div>
+            </div>
+        </div>
+        
+        <!-- Attendance Details -->
+        {% if attendance_records %}
+        <div class="attendance-details">
+            <div class="detail-header">
+                <h3>Attendance Records (Last 20)</h3>
+                <a href="{% url 'mark-attendance' selected_student.id %}" class="btn btn-primary">✏️ Mark Attendance</a>
+            </div>
+            
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Subject</th>
+                        <th>Status</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance_records %}
+                    <tr class="attendance-row-{{ record.is_present|lower }}">
+                        <td>{{ record.date }}</td>
+                        <td>
+                            <span class="subject-code">{{ record.subject.code }}</span>
+                            <span class="subject-name">{{ record.subject.name }}</span>
+                        </td>
+                        <td>
+                            {% if record.is_present %}
+                                <span class="badge badge-present">✓ Present</span>
+                            {% else %}
+                                <span class="badge badge-absent">✗ Absent</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ record.remarks|default:"--" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Download Option -->
+        <div class="actions">
+            <a href="{% url 'attendance-report' selected_student.id %}" class="btn btn-secondary">📊 View Detailed Report</a>
+        </div>
+        {% else %}
+        <div class="no-attendance">
+            <p>No attendance records for this student.</p>
+            <a href="{% url 'mark-attendance' selected_student.id %}" class="btn btn-primary">✏️ Mark Attendance</a>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="no-selection">
+        <p>Select a student to view attendance records</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.attendance-container {
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.attendance-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-card:nth-child(2) {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+}
+
+.stat-card:nth-child(3) {
+    background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+}
+
+.stat-label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.stat-value {
+    display: block;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.selector-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.selector-form {
+    display: flex;
+    gap: 10px;
+}
+
+.selector-form select {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.attendance-result {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.result-header h2 {
+    margin: 0;
+}
+
+.result-header p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.attendance-display {
+    text-align: center;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    min-width: 150px;
+}
+
+.attendance-value {
+    font-size: 48px;
+    font-weight: bold;
+}
+
+.attendance-label {
+    font-size: 14px;
+    margin-top: 5px;
+    opacity: 0.9;
+}
+
+.attendance-details {
+    margin-bottom: 20px;
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.detail-header h3 {
+    margin: 0;
+    color: #667eea;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-secondary {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.attendance-table th {
+    background: #f0f0f0;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+    font-weight: bold;
+}
+
+.attendance-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.attendance-table tr:hover {
+    background: #f9f9f9;
+}
+
+.attendance-row-true {
+    border-left: 4px solid #4CAF50;
+    background: #f1f8f6;
+}
+
+.attendance-row-false {
+    border-left: 4px solid #f44336;
+    background: #fff3f3;
+}
+
+.subject-code {
+    display: block;
+    font-weight: bold;
+}
+
+.subject-name {
+    display: block;
+    font-size: 12px;
+    color: #666;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.badge-present {
+    background: #4CAF50;
+    color: white;
+}
+
+.badge-absent {
+    background: #f44336;
+    color: white;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.no-attendance,
+.no-selection {
+    text-align: center;
+    padding: 40px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    color: #999;
+}
+
+.no-attendance p,
+.no-selection p {
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+</style>
+{% endblock %}
